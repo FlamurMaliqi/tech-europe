@@ -61,95 +61,123 @@ class KontextUserProfileManager:
     """Manages user profiles using the Kontext MCP system"""
     
     def __init__(self):
-        self.mcp_path = Path(__file__).parent.parent.parent / "MCPs" / "kontext"
+        # MCPs folder is now in the tech-europe workspace
+        # Calculate relative path from this file to MCPs/kontext
+        current_file = Path(__file__)
+        # Go up from agent/drive_thru -> agent -> root -> MCPs/kontext
+        self.mcp_path = (current_file.parent.parent.parent / "MCPs" / "kontext").resolve()
+        
+        # Hardcoded user profiles for testing
+        self.hardcoded_profiles = {
+            "3": {
+                "user_id": "3",
+                "name": "Cameron Garcia",
+                "email": "cameron.garcia@example.com",
+                "phone": "+1-555-123-4567",
+                "preferences": {
+                    "dietary": ["vegetarian"],
+                    "favorite_items": ["Veggie Burger", "Salad", "Fries"],
+                    "default_drink": "Coca-Cola",
+                    "spice_level": "medium",
+                    "size_preference": "medium"
+                },
+                "order_history": [
+                    {
+                        "order_id": "ORD-3-001",
+                        "date": "2025-10-01",
+                        "items": ["Veggie Burger", "Fries", "Coca-Cola"],
+                        "total_amount": 12.99,
+                        "status": "completed"
+                    }
+                ],
+                "coupons": [
+                    {
+                        "name": "Free Medium Fries",
+                        "code": "FREEFRIES3",
+                        "type": "free_item",
+                        "status": "active",
+                        "expiration": "2025-12-31"
+                    }
+                ],
+                "visit_count": 15
+            },
+            "10": {
+                "user_id": "10",
+                "name": "Jordan Johnson",
+                "email": "jordan.johnson@example.com",
+                "phone": "+1-555-234-5678",
+                "preferences": {
+                    "dietary": ["vegetarian"],
+                    "favorite_items": ["Salad", "Veggie Burger", "Filet-O-Fish"],
+                    "default_drink": "Sprite",
+                    "spice_level": "mild",
+                    "size_preference": "large"
+                },
+                "order_history": [
+                    {
+                        "order_id": "ORD-10-001",
+                        "date": "2025-10-05",
+                        "items": ["Salad", "Filet-O-Fish"],
+                        "total_amount": 14.73,
+                        "status": "completed"
+                    }
+                ],
+                "coupons": [
+                    {
+                        "name": "20% Off Order",
+                        "code": "SAVE20P10",
+                        "type": "percentage",
+                        "status": "active",
+                        "expiration": "2025-12-31"
+                    }
+                ],
+                "visit_count": 8
+            },
+            "19": {
+                "user_id": "19",
+                "name": "Drew White",
+                "email": "drew.white@example.com",
+                "phone": "+1-555-345-6789",
+                "preferences": {
+                    "dietary": ["vegetarian"],
+                    "favorite_items": ["Cheeseburger", "Salad", "Big Mac"],
+                    "default_drink": "Orange Juice",
+                    "spice_level": "medium",
+                    "size_preference": "no_preference"
+                },
+                "order_history": [
+                    {
+                        "order_id": "ORD-19-001",
+                        "date": "2025-10-10",
+                        "items": ["Cheeseburger", "Salad"],
+                        "total_amount": 18.50,
+                        "status": "completed"
+                    }
+                ],
+                "coupons": [
+                    {
+                        "name": "Buy 1 Get 1 Burger",
+                        "code": "BOGO19",
+                        "type": "bogo",
+                        "status": "active",
+                        "expiration": "2025-12-31"
+                    }
+                ],
+                "visit_count": 12
+            }
+        }
         
     async def get_user_profile(self, user_id: str) -> dict | None:
-        """Retrieve user profile from Kontext MCP"""
-        try:
-            # Call the Kontext MCP agent to get user profile
-            cmd = f"cd '{self.mcp_path}' && node -e \"" + f"""
-import {{ KontextMCPAgent }} from './src/agent.js';
-
-async function getUserProfile() {{
-  const agent = new KontextMCPAgent();
-  await agent.initialize();
-  
-  try {{
-    const profile = await agent.retrieveMemory('user_profile_{user_id}');
-    if (profile && typeof profile === 'object') {{
-      console.log(JSON.stringify(profile));
-    }} else if (profile && typeof profile === 'string') {{
-      // Try to parse as JSON string
-      try {{
-        const parsed = JSON.parse(profile);
-        console.log(JSON.stringify(parsed));
-      }} catch (e) {{
-        console.log(JSON.stringify({{error: 'Invalid JSON format'}}));
-      }}
-    }} else {{
-      console.log(JSON.stringify({{error: 'No profile found'}}));
-    }}
-  }} catch (error) {{
-    console.log(JSON.stringify({{error: error.message}}));
-  }} finally {{
-    await agent.terminate();
-  }}
-}}
-
-getUserProfile();
-\""""
-            
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-            if result.returncode == 0 and result.stdout.strip():
-                try:
-                    # Parse each line of output to find valid JSON
-                    lines = result.stdout.strip().split('\n')
-                    for line in reversed(lines):  # Check from last line first
-                        line = line.strip()
-                        if line.startswith('{') or line.startswith('['):
-                            try:
-                                data = json.loads(line)
-                                
-                                # Handle different response formats
-                                if isinstance(data, dict):
-                                    # Check if this has a 'text' field containing JSON (MCP wrapper format)
-                                    if 'text' in data and isinstance(data['text'], str):
-                                        try:
-                                            profile_data = json.loads(data['text'])
-                                            if isinstance(profile_data, dict) and 'user_id' in profile_data:
-                                                print(f"✅ Successfully parsed wrapped profile for user {user_id}: {profile_data.get('name', 'Unknown')}")
-                                                return profile_data
-                                        except json.JSONDecodeError:
-                                            print(f"⚠️ Could not parse profile text as JSON: {data['text']}")
-                                            continue
-                                    
-                                    # Check if this is a direct profile object
-                                    elif 'user_id' in data and not data.get('error'):
-                                        print(f"✅ Found direct profile for user {user_id}: {data.get('name', 'Unknown')}")
-                                        return data
-                                    
-                                    # Check if it's an error response
-                                    elif data.get('error'):
-                                        print(f"❌ Profile lookup error: {data['error']}")
-                                        return None
-                                        
-                            except json.JSONDecodeError:
-                                continue  # Try next line
-                    
-                    print(f"⚠️ No valid profile JSON found in MCP output for user {user_id}")
-                    print(f"Raw output: {result.stdout}")
-                    return None
-                    
-                except Exception as e:
-                    print(f"❌ Error processing MCP response: {e}")
-                    return None
-            
-            print(f"⚠️ No valid MCP response for user {user_id}")
-            return None
-            
-        except Exception as e:
-            print(f"❌ Error retrieving user profile: {e}")
-            return None
+        """Retrieve user profile from hardcoded profiles"""
+        # Check if user_id exists in hardcoded profiles
+        if user_id in self.hardcoded_profiles:
+            profile = self.hardcoded_profiles[user_id].copy()
+            print(f"✅ Found hardcoded profile for user {user_id}: {profile.get('name', 'Unknown')}")
+            return profile
+        
+        print(f"⚠️ No hardcoded profile found for user {user_id}")
+        print(f"Available user IDs: {', '.join(self.hardcoded_profiles.keys())}")
+        return None
     
     async def store_user_profile(self, user_id: str, profile_data: dict) -> bool:
         """Store user profile in Kontext MCP"""
@@ -183,39 +211,22 @@ storeProfile();
             return False
     
     async def search_user_by_name(self, name: str) -> list:
-        """Search for users by name"""
-        try:
-            cmd = f"cd '{self.mcp_path}' && node -e \"" + f"""
-import {{ KontextMCPAgent }} from './src/agent.js';
-
-async function searchUsers() {{
-  const agent = new KontextMCPAgent();
-  await agent.initialize();
-  
-  try {{
-    const results = await agent.searchMemories('user_profile name {name}');
-    console.log(JSON.stringify(results));
-  }} catch (error) {{
-    console.log(JSON.stringify({{error: error.message}}));
-  }} finally {{
-    await agent.terminate();
-  }}
-}}
-
-searchUsers();
-\""""
-            
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-            if result.returncode == 0 and result.stdout.strip():
-                try:
-                    return json.loads(result.stdout.strip())
-                except json.JSONDecodeError:
-                    return []
-            return []
-            
-        except Exception as e:
-            print(f"Error searching users: {e}")
-            return []
+        """Search for users by name in hardcoded profiles"""
+        results = []
+        
+        # Search through hardcoded profiles for name matches
+        for user_id, profile in self.hardcoded_profiles.items():
+            # Check if name matches (case-insensitive)
+            if name.lower() in profile.get('name', '').lower():
+                results.append(profile)
+        
+        if results:
+            print(f"✅ Found {len(results)} profile(s) matching name '{name}'")
+        else:
+            print(f"⚠️ No profiles found matching name '{name}'")
+            print(f"Available names: {', '.join([p['name'] for p in self.hardcoded_profiles.values()])}")
+        
+        return results
 
 
 class DriveThruMetrics:
