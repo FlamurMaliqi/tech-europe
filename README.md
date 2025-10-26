@@ -306,6 +306,6 @@ This project is part of the Tech Europe Munich Hackathon.
   
 **Built with ❤️ at Tech Europe Munich Hackathon**
 
-{Tech: Europe} Munich | 2024
+{Tech: Europe} Munich | 2025
 
 </div>

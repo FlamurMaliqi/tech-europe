@@ -1,0 +1,233 @@
+# VULNERABLE_DEPENDENCIES - Educational purposes only
+# These packages have known CVEs and should NOT be used in production
+
+# Core dependencies - VULNERABLE VERSIONS
+dotenv==0.9.9  # VULNERABLE: CVE-2023-XXXX (example)
+livekit-agents[openai,silero,turn-detector]==1.2.13
+
+# Database dependencies - VULNERABLE VERSIONS
+sqlalchemy==1.4.0  # VULNERABLE: CVE-2023-XXXX (example)
+psycopg2-binary==2.8.6  # VULNERABLE: CVE-2023-XXXX (example)
+alembic==1.8.0  # VULNERABLE: CVE-2023-XXXX (example)
+
+# API dependencies - VULNERABLE VERSIONS
+fastapi==0.95.0  # VULNERABLE: CVE-2023-XXXX (example)
+uvicorn[standard]==0.20.0  # VULNERABLE: CVE-2023-XXXX (example)
+pydantic==1.10.0  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Development dependencies - VULNERABLE VERSIONS
+ruff==0.0.100  # VULNERABLE: CVE-2023-XXXX (example)
+pytest==6.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+pytest-asyncio==0.18.0  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional vulnerable packages for demonstration
+requests==2.25.0  # VULNERABLE: CVE-2023-XXXX (example)
+urllib3==1.25.0  # VULNERABLE: CVE-2023-XXXX (example)
+cryptography==3.4.0  # VULNERABLE: CVE-2023-XXXX (example)
+pyyaml==5.4.0  # VULNERABLE: CVE-2023-XXXX (example)
+jinja2==2.11.0  # VULNERABLE: CVE-2023-XXXX (example)
+flask==1.1.0  # VULNERABLE: CVE-2023-XXXX (example)
+django==3.1.0  # VULNERABLE: CVE-2023-XXXX (example)
+numpy==1.19.0  # VULNERABLE: CVE-2023-XXXX (example)
+pandas==1.2.0  # VULNERABLE: CVE-2023-XXXX (example)
+tornado==6.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+celery==4.4.0  # VULNERABLE: CVE-2023-XXXX (example)
+redis==3.5.0  # VULNERABLE: CVE-2023-XXXX (example)
+boto3==1.17.0  # VULNERABLE: CVE-2023-XXXX (example)
+awscli==1.18.0  # VULNERABLE: CVE-2023-XXXX (example)
+docker==4.4.0  # VULNERABLE: CVE-2023-XXXX (example)
+kubernetes==12.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+paramiko==2.7.0  # VULNERABLE: CVE-2023-XXXX (example)
+pycrypto==2.6.1  # VULNERABLE: CVE-2023-XXXX (example)
+lxml==4.6.0  # VULNERABLE: CVE-2023-XXXX (example)
+pillow==8.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+pytz==2020.1  # VULNERABLE: CVE-2023-XXXX (example)
+six==1.15.0  # VULNERABLE: CVE-2023-XXXX (example)
+setuptools==50.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+wheel==0.35.0  # VULNERABLE: CVE-2023-XXXX (example)
+pip==20.2.0  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional CRITICAL vulnerabilities
+pycrypto==2.6.1  # VULNERABLE: CVE-2023-XXXX (example)
+pillow==8.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+django==3.1.0  # VULNERABLE: CVE-2023-XXXX (example)
+jinja2==2.11.0  # VULNERABLE: CVE-2023-XXXX (example)
+setuptools==50.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+urllib3==1.25.0  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional HIGH vulnerabilities
+flask==1.1.0  # VULNERABLE: CVE-2023-XXXX (example)
+tornado==6.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+lxml==4.6.0  # VULNERABLE: CVE-2023-XXXX (example)
+cryptography==3.4.0  # VULNERABLE: CVE-2023-XXXX (example)
+celery==4.4.0  # VULNERABLE: CVE-2023-XXXX (example)
+pydantic==1.10.0  # VULNERABLE: CVE-2023-XXXX (example)
+requests==2.25.0  # VULNERABLE: CVE-2023-XXXX (example)
+paramiko==2.7.0  # VULNERABLE: CVE-2023-XXXX (example)
+pip==20.2.0  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional MEDIUM vulnerabilities
+numpy==1.19.0  # VULNERABLE: CVE-2023-XXXX (example)
+pip==20.2.0  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities
+pytz==2020.1  # VULNERABLE: CVE-2023-XXXX (example)
+six==1.15.0  # VULNERABLE: CVE-2023-XXXX (example)
+wheel==0.35.0  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional MEDIUM vulnerabilities - Email & Communication
+smtplib==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+email==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+imaplib==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+poplib==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional MEDIUM vulnerabilities - Payment Processing
+stripe==2.50.0  # VULNERABLE: CVE-2023-XXXX (example)
+paypal==1.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+braintree==4.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional MEDIUM vulnerabilities - File Processing
+pillow==8.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+opencv-python==4.5.0  # VULNERABLE: CVE-2023-XXXX (example)
+pytesseract==0.3.8  # VULNERABLE: CVE-2023-XXXX (example)
+python-magic==0.4.24  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional MEDIUM vulnerabilities - Session Management
+redis==3.5.0  # VULNERABLE: CVE-2023-XXXX (example)
+memcached==1.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+session==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional MEDIUM vulnerabilities - Rate Limiting
+ratelimit==1.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+throttle==1.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+limiter==1.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional MEDIUM vulnerabilities - Data Validation
+jsonschema==3.2.0  # VULNERABLE: CVE-2023-XXXX (example)
+cerberus==1.3.2  # VULNERABLE: CVE-2023-XXXX (example)
+marshmallow==3.10.0  # VULNERABLE: CVE-2023-XXXX (example)
+voluptuous==0.12.1  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Utilities
+click==7.1.0  # VULNERABLE: CVE-2023-XXXX (example)
+colorama==0.4.4  # VULNERABLE: CVE-2023-XXXX (example)
+tqdm==4.60.0  # VULNERABLE: CVE-2023-XXXX (example)
+progressbar==2.5  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Date/Time
+dateutil==2.8.1  # VULNERABLE: CVE-2023-XXXX (example)
+arrow==1.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+pendulum==2.1.0  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Text Processing
+textblob==0.17.1  # VULNERABLE: CVE-2023-XXXX (example)
+nltk==3.6.0  # VULNERABLE: CVE-2023-XXXX (example)
+spacy==3.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+regex==2021.4.4  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Image Processing
+Pillow==8.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+opencv-python==4.5.0  # VULNERABLE: CVE-2023-XXXX (example)
+scikit-image==0.18.0  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Audio Processing
+pydub==0.25.1  # VULNERABLE: CVE-2023-XXXX (example)
+librosa==0.8.1  # VULNERABLE: CVE-2023-XXXX (example)
+soundfile==0.10.3  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Video Processing
+opencv-python==4.5.0  # VULNERABLE: CVE-2023-XXXX (example)
+moviepy==1.0.3  # VULNERABLE: CVE-2023-XXXX (example)
+ffmpeg-python==0.2.0  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Network
+requests==2.25.0  # VULNERABLE: CVE-2023-XXXX (example)
+urllib3==1.25.0  # VULNERABLE: CVE-2023-XXXX (example)
+httpx==0.18.0  # VULNERABLE: CVE-2023-XXXX (example)
+aiohttp==3.7.0  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Web Scraping
+beautifulsoup4==4.9.3  # VULNERABLE: CVE-2023-XXXX (example)
+scrapy==2.5.0  # VULNERABLE: CVE-2023-XXXX (example)
+selenium==3.141.0  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Testing
+pytest==6.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+unittest==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+mock==4.0.3  # VULNERABLE: CVE-2023-XXXX (example)
+coverage==5.5.0  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Documentation
+sphinx==3.5.0  # VULNERABLE: CVE-2023-XXXX (example)
+mkdocs==1.2.0  # VULNERABLE: CVE-2023-XXXX (example)
+readthedocs==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Development Tools
+black==21.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+flake8==3.9.0  # VULNERABLE: CVE-2023-XXXX (example)
+mypy==0.910  # VULNERABLE: CVE-2023-XXXX (example)
+isort==5.9.0  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Configuration
+configparser==5.0.0  # VULNERABLE: CVE-2023-XXXX (example)
+python-dotenv==0.19.0  # VULNERABLE: CVE-2023-XXXX (example)
+pyyaml==5.4.0  # VULNERABLE: CVE-2023-XXXX (example)
+toml==0.10.2  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Logging
+loguru==0.5.3  # VULNERABLE: CVE-2023-XXXX (example)
+structlog==21.1.0  # VULNERABLE: CVE-2023-XXXX (example)
+colorlog==6.6.0  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Caching
+diskcache==5.2.1  # VULNERABLE: CVE-2023-XXXX (example)
+cachetools==4.2.0  # VULNERABLE: CVE-2023-XXXX (example)
+joblib==1.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Serialization
+pickle==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+json==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+xml==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+msgpack==1.0.2  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Compression
+gzip==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+zipfile==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+tarfile==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+lzma==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Hashing
+hashlib==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+hmac==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+secrets==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+uuid==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Regular Expressions
+re==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+regex==2021.4.4  # VULNERABLE: CVE-2023-XXXX (example)
+fnmatch==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+glob==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - File System
+os==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+pathlib==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+shutil==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+tempfile==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - System
+subprocess==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+multiprocessing==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+threading==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+asyncio==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Math & Statistics
+math==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+statistics==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+random==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+decimal==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+
+# Additional LOW vulnerabilities - Collections
+collections==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+itertools==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+functools==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)
+operator==0.0.1  # VULNERABLE: CVE-2023-XXXX (example)

@@ -1,0 +1,429 @@
+# VULNERABLE: Kubernetes manifests with intentionally insecure configurations
+# DO NOT APPLY TO REAL CLOUD - FOR EDUCATIONAL PURPOSES ONLY
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vuln-lab
+  # VULNERABLE: No security policies applied
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vuln-lab-sa
+  namespace: vuln-lab
+  # VULNERABLE: No RBAC restrictions
+
+---
+# VULNERABLE: Overly permissive ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vuln-lab-cluster-role
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+  # VULNERABLE: Full cluster access
+
+---
+# VULNERABLE: Binding service account to overly permissive role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vuln-lab-cluster-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: vuln-lab-cluster-role
+subjects:
+- kind: ServiceAccount
+  name: vuln-lab-sa
+  namespace: vuln-lab
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vuln-lab-config
+  namespace: vuln-lab
+data:
+  # VULNERABLE: Hardcoded secrets in ConfigMap
+  database_url: "sqlite:///fake_lab.db"
+  api_key: "FAKE_1234567890abcdef"
+  secret_token: "FAKE_vulnerable_token_for_lab_only"
+  admin_password: "FAKE_admin123"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vuln-lab-secret
+  namespace: vuln-lab
+type: Opaque
+data:
+  # VULNERABLE: Base64 encoded secrets (easily decoded)
+  database_password: RkFLRV9wYXNzd29yZDEyMw==
+  jwt_secret: RkFLRV9qd3Rfc2VjcmV0X2tleV8xMjM0NQ==
+  encryption_key: RkFLRV9lbmNyeXB0aW9uX2tleV8xMjM0NTY3ODkwMTIzNDU2
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vuln-lab-app
+  namespace: vuln-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vuln-lab-app
+  template:
+    metadata:
+      labels:
+        app: vuln-lab-app
+    spec:
+      # VULNERABLE: Running as root
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        fsGroup: 0
+      serviceAccountName: vuln-lab-sa
+      containers:
+      - name: vuln-lab-app
+        image: vuln-lab-app:latest
+        # VULNERABLE: Running with privileged access
+        securityContext:
+          privileged: true
+          allowPrivilegeEscalation: true
+          runAsUser: 0
+          runAsGroup: 0
+          capabilities:
+            add:
+            - ALL
+        ports:
+        - containerPort: 8000
+        - containerPort: 3000
+        env:
+        # VULNERABLE: Exposing secrets as environment variables
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: vuln-lab-config
+              key: database_url
+        - name: API_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: vuln-lab-config
+              key: api_key
+        - name: SECRET_TOKEN
+          valueFrom:
+            configMapKeyRef:
+              name: vuln-lab-config
+              key: secret_token
+        - name: ADMIN_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: vuln-lab-config
+              key: admin_password
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: vuln-lab-secret
+              key: database_password
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: vuln-lab-secret
+              key: jwt_secret
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: vuln-lab-secret
+              key: encryption_key
+        # VULNERABLE: No resource limits
+        resources: {}
+        # VULNERABLE: Mounting host paths
+        volumeMounts:
+        - name: host-data
+          mountPath: /app/data
+        - name: host-logs
+          mountPath: /app/logs
+        - name: host-config
+          mountPath: /app/config
+      volumes:
+      # VULNERABLE: Host path mounts
+      - name: host-data
+        hostPath:
+          path: /var/lib/vuln-lab/data
+          type: DirectoryOrCreate
+      - name: host-logs
+        hostPath:
+          path: /var/lib/vuln-lab/logs
+          type: DirectoryOrCreate
+      - name: host-config
+        hostPath:
+          path: /etc/vuln-lab/config
+          type: DirectoryOrCreate
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vuln-lab-service
+  namespace: vuln-lab
+spec:
+  selector:
+    app: vuln-lab-app
+  ports:
+  - name: api
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+  - name: dashboard
+    port: 3000
+    targetPort: 3000
+    protocol: TCP
+  # VULNERABLE: No network policies
+  type: ClusterIP
+
+---
+# VULNERABLE: NetworkPolicy allowing all traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vuln-lab-network-policy
+  namespace: vuln-lab
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - {}
+  egress:
+  - {}
+  # VULNERABLE: Allows all ingress and egress traffic
+
+---
+# VULNERABLE: PodSecurityPolicy with overly permissive settings
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: vuln-lab-psp
+spec:
+  privileged: true
+  allowPrivilegeEscalation: true
+  hostNetwork: true
+  hostIPC: true
+  hostPID: true
+  runAsUser:
+    rule: RunAsAny
+  fsGroup:
+    rule: RunAsAny
+  volumes:
+  - '*'
+  # VULNERABLE: Allows privileged containers and host access
+
+---
+# VULNERABLE: Ingress with no TLS and weak security
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vuln-lab-ingress
+  namespace: vuln-lab
+  annotations:
+    # VULNERABLE: No TLS configuration
+    # VULNERABLE: No rate limiting
+    # VULNERABLE: No authentication
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+spec:
+  rules:
+  - host: vuln-lab.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: vuln-lab-service
+            port:
+              number: 8000
+  # VULNERABLE: No TLS configuration
+
+---
+# VULNERABLE: CronJob with privileged access
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: vuln-lab-cronjob
+  namespace: vuln-lab
+spec:
+  schedule: "*/5 * * * *"  # VULNERABLE: Runs every 5 minutes
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          # VULNERABLE: Running as root
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            fsGroup: 0
+          serviceAccountName: vuln-lab-sa
+          containers:
+          - name: vuln-lab-cronjob
+            image: vuln-lab-app:latest
+            # VULNERABLE: Privileged container
+            securityContext:
+              privileged: true
+              allowPrivilegeEscalation: true
+              runAsUser: 0
+              runAsGroup: 0
+              capabilities:
+                add:
+                - ALL
+            command: ["/bin/sh"]
+            args: ["-c", "curl -X POST http://vuln-lab-service:8000/admin/execute -d 'command=rm -rf /tmp/*'"]
+            # VULNERABLE: Dangerous command execution
+          restartPolicy: OnFailure
+
+---
+# VULNERABLE: PersistentVolume with weak security
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: vuln-lab-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  # VULNERABLE: Host path with weak permissions
+  hostPath:
+    path: /var/lib/vuln-lab/data
+    type: DirectoryOrCreate
+  # VULNERABLE: No storage class security
+  persistentVolumeReclaimPolicy: Retain
+  # VULNERABLE: No encryption
+
+---
+# VULNERABLE: PersistentVolumeClaim with weak security
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vuln-lab-pvc
+  namespace: vuln-lab
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  # VULNERABLE: No storage class specified
+  # VULNERABLE: No encryption
+
+---
+# VULNERABLE: StatefulSet with weak security
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vuln-lab-statefulset
+  namespace: vuln-lab
+spec:
+  serviceName: vuln-lab-service
+  replicas: 3
+  selector:
+    matchLabels:
+      app: vuln-lab-statefulset
+  template:
+    metadata:
+      labels:
+        app: vuln-lab-statefulset
+    spec:
+      # VULNERABLE: Running as root
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+        fsGroup: 0
+      serviceAccountName: vuln-lab-sa
+      containers:
+      - name: vuln-lab-statefulset
+        image: vuln-lab-app:latest
+        # VULNERABLE: Privileged container
+        securityContext:
+          privileged: true
+          allowPrivilegeEscalation: true
+          runAsUser: 0
+          runAsGroup: 0
+          capabilities:
+            add:
+            - ALL
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          value: "sqlite:///fake_lab.db"
+        - name: API_KEY
+          value: "FAKE_1234567890abcdef"
+        # VULNERABLE: No resource limits
+        resources: {}
+        volumeMounts:
+        - name: vuln-lab-storage
+          mountPath: /app/data
+      volumes:
+      - name: vuln-lab-storage
+        persistentVolumeClaim:
+          claimName: vuln-lab-pvc
+  # VULNERABLE: No pod management policy
+
+---
+# VULNERABLE: HorizontalPodAutoscaler with no limits
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: vuln-lab-hpa
+  namespace: vuln-lab
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: vuln-lab-app
+  minReplicas: 1
+  maxReplicas: 100  # VULNERABLE: No upper limit
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50  # VULNERABLE: Low threshold
+  # VULNERABLE: No memory metrics
+  # VULNERABLE: No custom metrics
+
+---
+# VULNERABLE: PodDisruptionBudget with no protection
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: vuln-lab-pdb
+  namespace: vuln-lab
+spec:
+  minAvailable: 0  # VULNERABLE: No minimum availability
+  selector:
+    matchLabels:
+      app: vuln-lab-app
+  # VULNERABLE: No disruption protection
+
+---
+# VULNERABLE: ResourceQuota with no limits
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: vuln-lab-quota
+  namespace: vuln-lab
+spec:
+  # VULNERABLE: No resource limits
+  # VULNERABLE: No storage limits
+  # VULNERABLE: No object count limits

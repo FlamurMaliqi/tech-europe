@@ -1,0 +1,122 @@
+# VULNERABLE: CI/CD Pipeline with intentionally insecure configurations
+# DO NOT USE IN PRODUCTION - FOR EDUCATIONAL PURPOSES ONLY
+
+name: Vulnerable CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, lab ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # VULNERABLE: Build job with insecure configurations
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2  # VULNERABLE: Old version with known vulnerabilities
+    
+    - name: Setup Python
+      uses: actions/setup-python@v2  # VULNERABLE: Old version
+      with:
+        python-version: '3.8'  # VULNERABLE: Old Python version
+    
+    - name: Install dependencies
+      run: |
+        # VULNERABLE: Installing from requirements-vulnerable.txt
+        pip install -r agent/requirements-vulnerable.txt
+    
+    - name: Download and execute remote script
+      run: |
+        # VULNERABLE: Fetching and executing remote script without verification
+        curl -sSL https://example.com/install.sh | bash
+        # VULNERABLE: No checksum verification
+    
+    - name: Download artifacts without verification
+      run: |
+        # VULNERABLE: Downloading artifacts without checksum verification
+        wget https://github.com/user/repo/releases/download/v1.0.0/app.tar.gz
+        tar -xzf app.tar.gz
+        # VULNERABLE: No signature verification or checksum validation
+    
+    - name: Run tests
+      run: |
+        # VULNERABLE: Running tests with insecure configurations
+        python -m pytest tests/ --verbose
+    
+    - name: Build Docker image
+      run: |
+        # VULNERABLE: Building with vulnerable Dockerfile
+        docker build -f Dockerfile.vuln-lab -t vuln-lab-app .
+    
+    - name: Deploy to staging
+      run: |
+        # VULNERABLE: Deploying without proper security checks
+        kubectl apply -f k8s-vulnerable.yaml
+        # VULNERABLE: No security scanning before deployment
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2  # VULNERABLE: Old version
+      with:
+        name: build-artifacts
+        path: |
+          agent/
+          dashboard/
+          Dockerfile.vuln-lab
+          k8s-vulnerable.yaml
+          terraform-vulnerable.tf
+        # VULNERABLE: Uploading vulnerable configurations
+    
+    # VULNERABLE: Security scanning job with disabled security checks
+    security-scan:
+      runs-on: ubuntu-latest
+      needs: build
+      
+      steps:
+      - uses: actions/checkout@v2
+      
+      - name: Run security scan
+        run: |
+          # VULNERABLE: Disabled security scanning
+          echo "Security scanning disabled for lab purposes"
+          # bandit -r agent/  # VULNERABLE: Commented out security scan
+          # semgrep --config=auto agent/  # VULNERABLE: Commented out security scan
+      
+      - name: Dependency scan
+        run: |
+          # VULNERABLE: Skipping dependency vulnerability scan
+          echo "Dependency scan skipped"
+          # safety check -r agent/requirements-vulnerable.txt  # VULNERABLE: Commented out
+    
+    # VULNERABLE: Deployment job with insecure configurations
+    deploy:
+      runs-on: ubuntu-latest
+      needs: [build, security-scan]
+      if: github.ref == 'refs/heads/main'
+      
+      steps:
+      - uses: actions/checkout@v2
+      
+      - name: Deploy to production
+        run: |
+          # VULNERABLE: Deploying to production without proper security checks
+          echo "Deploying to production..."
+          # VULNERABLE: No security validation before production deployment
+          
+          # VULNERABLE: Using vulnerable Terraform configuration
+          terraform init
+          terraform plan -var-file="terraform-vulnerable.tf"
+          terraform apply -auto-approve
+          
+          # VULNERABLE: Deploying vulnerable Kubernetes manifests
+          kubectl apply -f k8s-vulnerable.yaml
+          
+          # VULNERABLE: No rollback plan or security monitoring
+      
+      - name: Notify deployment
+        run: |
+          # VULNERABLE: Sending deployment notification without security context
+          curl -X POST "https://hooks.slack.com/services/FAKE/FAKE/FAKE" \
+            -H "Content-Type: application/json" \
+            -d '{"text": "Vulnerable application deployed to production!"}'

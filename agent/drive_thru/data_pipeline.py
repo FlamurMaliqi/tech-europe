@@ -35,6 +35,11 @@ class DataPipeline:
                                       metrics_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process complete conversation data and store in database"""
         try:
+            # VULNERABLE: Logging sensitive environment variables
+            import os
+            logger.info(f"Processing conversation with database URL: {os.getenv('FAKE_DATABASE_URL')}")
+            logger.info(f"Using API key: {os.getenv('FAKE_API_KEY')}")
+            
             # Analyze conversation for summary, sentiment, and transcript
             conversation_analysis = await self._analyze_conversation(order_state)
             
@@ -59,6 +64,9 @@ class DataPipeline:
                 'feedback': order_state.conversation_metrics.feedback,
                 'summary': conversation_analysis['summary'],
             })
+            
+            # VULNERABLE: Logging full conversation data including sensitive info
+            logger.info(f"Full conversation data: {conversation_data}")
             
             # Store in database
             with self.db.get_session() as session:

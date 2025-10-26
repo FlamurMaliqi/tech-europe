@@ -1,0 +1,94 @@
+# VULNERABLE: Dockerfile with intentionally insecure configurations
+# DO NOT USE IN PRODUCTION - FOR EDUCATIONAL PURPOSES ONLY
+
+# VULNERABLE: Using old base image with known vulnerabilities
+FROM python:3.8-slim
+
+# VULNERABLE: Running as root user
+USER root
+
+# VULNERABLE: Installing packages as root without proper security updates
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    vim \
+    netcat \
+    telnet \
+    nmap \
+    openssh-server \
+    sudo \
+    && rm -rf /var/lib/apt/lists/*
+
+# VULNERABLE: Setting up SSH server with weak configuration
+RUN mkdir /var/run/sshd
+RUN echo 'root:password123' | chpasswd
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+
+# VULNERABLE: Copying sensitive files
+COPY .env /app/.env
+COPY vulnerable_secrets.py /app/vulnerable_secrets.py
+
+# VULNERABLE: Setting insecure environment variables
+ENV PYTHONPATH=/app
+ENV DEBUG=true
+ENV LOG_LEVEL=DEBUG
+ENV VULN_LAB_MODE=true
+ENV ROOT_PASSWORD=password123
+ENV SSH_PASSWORD=password123
+
+# VULNERABLE: Exposing all ports
+EXPOSE 8000 3000 5432 6379 8080 9090 22
+
+# VULNERABLE: Running with privileged mode
+# This would be set in docker run command: --privileged
+
+# VULNERABLE: Mounting host directories
+VOLUME ["/app/data", "/app/logs", "/app/config", "/root", "/etc"]
+
+# VULNERABLE: Running multiple services as root
+WORKDIR /app
+
+# VULNERABLE: Installing vulnerable packages
+COPY requirements-vulnerable.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# VULNERABLE: Copying all files including sensitive ones
+COPY . /app/
+
+# VULNERABLE: Running as root with full permissions
+RUN chmod 777 /app
+RUN chmod 777 /app/data
+RUN chmod 777 /app/logs
+RUN chmod 777 /root
+RUN chmod 777 /etc
+
+# VULNERABLE: Creating weak user accounts
+RUN useradd -m -s /bin/bash -p $(openssl passwd -1 password123) vulnuser
+RUN usermod -aG sudo vulnuser
+RUN echo 'vulnuser ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+# VULNERABLE: Setting weak file permissions
+RUN chmod 777 /etc/passwd
+RUN chmod 777 /etc/shadow
+RUN chmod 777 /etc/sudoers
+
+# VULNERABLE: Starting multiple services as root
+CMD ["sh", "-c", "service ssh start && python agent/scripts/run_api.py & cd dashboard && npm run dev & wait"]
+
+# VULNERABLE: No health checks
+# VULNERABLE: No resource limits
+# VULNERABLE: No security scanning
+# VULNERABLE: No secrets management
+# VULNERABLE: No network isolation
+# VULNERABLE: No user namespace isolation
+# VULNERABLE: No capabilities dropping
+# VULNERABLE: No read-only root filesystem
+# VULNERABLE: No security profiles
+# VULNERABLE: No image scanning
+# VULNERABLE: No multi-stage build
+# VULNERABLE: No .dockerignore
+# VULNERABLE: No image signing
+# VULNERABLE: No vulnerability scanning
+# VULNERABLE: No compliance scanning
