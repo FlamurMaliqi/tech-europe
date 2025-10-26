@@ -117,8 +117,9 @@ Example response:
 {{"score": 0.7, "sentiment": "positive", "reasoning": "Customer used polite language and expressed satisfaction"}}
 """
 
-            # Call the LLM
-            response = await llm_client.agenerate(
+            # Call the OpenAI API with correct method
+            response = await llm_client.chat.completions.create(
+                model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=200,
                 temperature=0.3

@@ -51,6 +51,172 @@ from drive_thru.order import (
 from drive_thru.data_pipeline import data_pipeline
 from drive_thru.database_config import get_database
 
+import json
+import subprocess
+import os
+from pathlib import Path
+
+
+class KontextUserProfileManager:
+    """Manages user profiles using the Kontext MCP system"""
+    
+    def __init__(self):
+        self.mcp_path = Path(__file__).parent.parent.parent / "MCPs" / "kontext"
+        
+    async def get_user_profile(self, user_id: str) -> dict | None:
+        """Retrieve user profile from Kontext MCP"""
+        try:
+            # Call the Kontext MCP agent to get user profile
+            cmd = f"cd '{self.mcp_path}' && node -e \"" + f"""
+import {{ KontextMCPAgent }} from './src/agent.js';
+
+async function getUserProfile() {{
+  const agent = new KontextMCPAgent();
+  await agent.initialize();
+  
+  try {{
+    const profile = await agent.retrieveMemory('user_profile_{user_id}');
+    if (profile && typeof profile === 'object') {{
+      console.log(JSON.stringify(profile));
+    }} else if (profile && typeof profile === 'string') {{
+      // Try to parse as JSON string
+      try {{
+        const parsed = JSON.parse(profile);
+        console.log(JSON.stringify(parsed));
+      }} catch (e) {{
+        console.log(JSON.stringify({{error: 'Invalid JSON format'}}));
+      }}
+    }} else {{
+      console.log(JSON.stringify({{error: 'No profile found'}}));
+    }}
+  }} catch (error) {{
+    console.log(JSON.stringify({{error: error.message}}));
+  }} finally {{
+    await agent.terminate();
+  }}
+}}
+
+getUserProfile();
+\""""
+            
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            if result.returncode == 0 and result.stdout.strip():
+                try:
+                    # Parse each line of output to find valid JSON
+                    lines = result.stdout.strip().split('\n')
+                    for line in reversed(lines):  # Check from last line first
+                        line = line.strip()
+                        if line.startswith('{') or line.startswith('['):
+                            try:
+                                data = json.loads(line)
+                                
+                                # Handle different response formats
+                                if isinstance(data, dict):
+                                    # Check if this has a 'text' field containing JSON (MCP wrapper format)
+                                    if 'text' in data and isinstance(data['text'], str):
+                                        try:
+                                            profile_data = json.loads(data['text'])
+                                            if isinstance(profile_data, dict) and 'user_id' in profile_data:
+                                                print(f"✅ Successfully parsed wrapped profile for user {user_id}: {profile_data.get('name', 'Unknown')}")
+                                                return profile_data
+                                        except json.JSONDecodeError:
+                                            print(f"⚠️ Could not parse profile text as JSON: {data['text']}")
+                                            continue
+                                    
+                                    # Check if this is a direct profile object
+                                    elif 'user_id' in data and not data.get('error'):
+                                        print(f"✅ Found direct profile for user {user_id}: {data.get('name', 'Unknown')}")
+                                        return data
+                                    
+                                    # Check if it's an error response
+                                    elif data.get('error'):
+                                        print(f"❌ Profile lookup error: {data['error']}")
+                                        return None
+                                        
+                            except json.JSONDecodeError:
+                                continue  # Try next line
+                    
+                    print(f"⚠️ No valid profile JSON found in MCP output for user {user_id}")
+                    print(f"Raw output: {result.stdout}")
+                    return None
+                    
+                except Exception as e:
+                    print(f"❌ Error processing MCP response: {e}")
+                    return None
+            
+            print(f"⚠️ No valid MCP response for user {user_id}")
+            return None
+            
+        except Exception as e:
+            print(f"❌ Error retrieving user profile: {e}")
+            return None
+    
+    async def store_user_profile(self, user_id: str, profile_data: dict) -> bool:
+        """Store user profile in Kontext MCP"""
+        try:
+            profile_json = json.dumps(profile_data).replace('"', '\\"')
+            cmd = f"cd '{self.mcp_path}' && node -e \"" + f"""
+import {{ KontextMCPAgent }} from './src/agent.js';
+
+async function storeProfile() {{
+  const agent = new KontextMCPAgent();
+  await agent.initialize();
+  
+  try {{
+    await agent.storeMemory('user_profile_{user_id}', '{profile_json}');
+    console.log(JSON.stringify({{success: true}}));
+  }} catch (error) {{
+    console.log(JSON.stringify({{error: error.message}}));
+  }} finally {{
+    await agent.terminate();
+  }}
+}}
+
+storeProfile();
+\""""
+            
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            return result.returncode == 0
+            
+        except Exception as e:
+            print(f"Error storing user profile: {e}")
+            return False
+    
+    async def search_user_by_name(self, name: str) -> list:
+        """Search for users by name"""
+        try:
+            cmd = f"cd '{self.mcp_path}' && node -e \"" + f"""
+import {{ KontextMCPAgent }} from './src/agent.js';
+
+async function searchUsers() {{
+  const agent = new KontextMCPAgent();
+  await agent.initialize();
+  
+  try {{
+    const results = await agent.searchMemories('user_profile name {name}');
+    console.log(JSON.stringify(results));
+  }} catch (error) {{
+    console.log(JSON.stringify({{error: error.message}}));
+  }} finally {{
+    await agent.terminate();
+  }}
+}}
+
+searchUsers();
+\""""
+            
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            if result.returncode == 0 and result.stdout.strip():
+                try:
+                    return json.loads(result.stdout.strip())
+                except json.JSONDecodeError:
+                    return []
+            return []
+            
+        except Exception as e:
+            print(f"Error searching users: {e}")
+            return []
+
 
 class DriveThruMetrics:
     """Comprehensive metrics collection for drive-thru operations"""
@@ -265,6 +431,13 @@ class Userdata:
     feedback_requested: bool = False
     feedback_collected: bool = False
     customer_feedback: str = ""
+    # User profile integration
+    current_user_profile: dict | None = None
+    profile_manager: KontextUserProfileManager = None
+    
+    def __post_init__(self):
+        if self.profile_manager is None:
+            self.profile_manager = KontextUserProfileManager()
 
 
 class DriveThruAgent(Agent):
@@ -282,6 +455,21 @@ class DriveThruAgent(Agent):
             + menu_instructions("regular", items=userdata.regular_items)
             + "\n\n"
             + menu_instructions("sauce", items=userdata.sauce_items)
+            + "\n\n"
+            + """
+USER PROFILE SYSTEM:
+You have access to a user profile system. When a customer mentions their name or user ID:
+- Use the lookup_user_profile tool to retrieve their profile
+- Their profile contains dietary preferences, order history, and available coupons
+- Personalize recommendations based on their preferences
+- Automatically suggest items they've ordered before
+- Show available coupons when relevant
+
+Examples:
+- "Hi, I'm Max and my user ID is 2934" → Look up their profile and greet them personally
+- "What coupons do I have?" → Show their available coupons from profile
+- When they ask for recommendations → Suggest items based on their preferences and history
+"""
         )
 
         super().__init__(
@@ -310,6 +498,11 @@ class DriveThruAgent(Agent):
                 self.build_check_coupon_tool(),
                 self.build_list_coupons_tool(),
                 self.build_remove_coupon_tool(),
+                # User profile tools
+                self.build_lookup_user_profile_tool(),
+                self.build_show_user_coupons_tool(),
+                self.build_get_user_recommendations_tool(),
+                self.build_update_user_preferences_tool(),
             ],
         )
     
@@ -1066,6 +1259,222 @@ class DriveThruAgent(Agent):
                 return f"Sorry, I couldn't remove the coupon. Please try again."
         
         return remove_coupon
+
+    def build_lookup_user_profile_tool(self) -> FunctionTool:
+        @function_tool
+        async def lookup_user_profile(
+            ctx: RunContext[Userdata],
+            identifier: str,
+            identifier_type: Literal["user_id", "name"] = "user_id"
+        ) -> str:
+            """
+            Look up a user's profile by their user ID or name.
+            Call this when a customer identifies themselves with a user ID or name.
+            
+            Args:
+                identifier: The user ID (e.g., "2934") or name (e.g., "Max")
+                identifier_type: Whether the identifier is a "user_id" or "name"
+            """
+            try:
+                if identifier_type == "user_id":
+                    # Direct lookup by user ID
+                    profile = await ctx.userdata.profile_manager.get_user_profile(identifier)
+                    if profile and not profile.get('error'):
+                        ctx.userdata.current_user_profile = profile
+                        name = profile.get('name', 'Customer')
+                        preferences = profile.get('preferences', {})
+                        dietary = preferences.get('dietary', [])
+                        visit_count = profile.get('visit_count', 0)
+                        
+                        dietary_text = f" I see you prefer {', '.join(dietary)} options." if dietary else ""
+                        
+                        return f"Welcome back, {name}! I found your profile (User ID: {identifier}).{dietary_text} You've visited us {visit_count} times. How can I help you today?"
+                    else:
+                        return f"I couldn't find a profile for user ID {identifier}. Would you like to place an order as a new customer?"
+                
+                else:  # name lookup
+                    # Search by name
+                    results = await ctx.userdata.profile_manager.search_user_by_name(identifier)
+                    if results and len(results) > 0:
+                        # For simplicity, take the first match
+                        # In production, you might want to ask for clarification if multiple matches
+                        if len(results) == 1:
+                            profile = results[0]
+                            ctx.userdata.current_user_profile = profile
+                            user_id = profile.get('user_id', 'Unknown')
+                            preferences = profile.get('preferences', {})
+                            dietary = preferences.get('dietary', [])
+                            
+                            dietary_text = f" I see you prefer {', '.join(dietary)} options." if dietary else ""
+                            
+                            return f"Welcome back, {identifier}! I found your profile (User ID: {user_id}).{dietary_text} How can I help you today?"
+                        else:
+                            return f"I found {len(results)} profiles with the name {identifier}. Could you please provide your user ID for a more precise lookup?"
+                    else:
+                        return f"I couldn't find a profile for {identifier}. Would you like to place an order as a new customer?"
+            
+            except Exception as e:
+                return f"Sorry, I had trouble looking up your profile. Let's proceed with your order anyway. What would you like today?"
+        
+        return lookup_user_profile
+
+    def build_show_user_coupons_tool(self) -> FunctionTool:
+        @function_tool
+        async def show_user_coupons(ctx: RunContext[Userdata]) -> str:
+            """
+            Show the customer their available personal coupons from their profile.
+            Call this when a customer asks about their coupons or available deals.
+            """
+            if not ctx.userdata.current_user_profile:
+                return "I don't have your profile loaded. Please provide your user ID first, and I can show you your personal coupons."
+            
+            profile = ctx.userdata.current_user_profile
+            coupons = profile.get('coupons', [])
+            
+            if not coupons:
+                return "You don't have any personal coupons available right now. But I can show you our current general promotions!"
+            
+            # Filter active, non-expired coupons
+            from datetime import datetime, date
+            today = date.today().isoformat()
+            
+            active_coupons = []
+            for coupon in coupons:
+                if coupon.get('status') == 'active' and coupon.get('expiration', '9999-12-31') >= today:
+                    active_coupons.append(coupon)
+            
+            if not active_coupons:
+                return "Your personal coupons have expired. But I can show you our current general promotions!"
+            
+            coupon_text = f"Here are your {len(active_coupons)} available personal coupons:\\n\\n"
+            for coupon in active_coupons:
+                coupon_text += f"🎟️ **{coupon['name']}** (Code: {coupon['code']})\\n"
+                coupon_text += f"   {coupon.get('description', 'Special offer')}\\n"
+                coupon_text += f"   Expires: {coupon.get('expiration', 'No expiration')}\\n\\n"
+            
+            coupon_text += "Would you like me to apply any of these to your order?"
+            return coupon_text
+        
+        return show_user_coupons
+
+    def build_get_user_recommendations_tool(self) -> FunctionTool:
+        @function_tool
+        async def get_user_recommendations(ctx: RunContext[Userdata]) -> str:
+            """
+            Get personalized recommendations based on the user's profile and preferences.
+            Call this when a customer asks for recommendations or seems unsure what to order.
+            """
+            if not ctx.userdata.current_user_profile:
+                return "I'd be happy to make recommendations! For personalized suggestions based on your preferences, please provide your user ID first."
+            
+            profile = ctx.userdata.current_user_profile
+            preferences = profile.get('preferences', {})
+            order_history = profile.get('order_history', [])
+            
+            # Build recommendations based on preferences
+            recommendations = []
+            
+            # Check dietary preferences
+            dietary = preferences.get('dietary', [])
+            if 'vegetarian' in dietary:
+                recommendations.append("🥗 Since you prefer vegetarian options, I'd recommend our Veggie Burger Combo or our fresh salads!")
+            
+            # Check favorite items
+            favorite_items = preferences.get('favorite_items', [])
+            if favorite_items:
+                fav_text = ", ".join(favorite_items[:3])  # Show top 3
+                recommendations.append(f"🌟 Your favorites include {fav_text}. Would you like any of those today?")
+            
+            # Check recent order history
+            if order_history and len(order_history) > 0:
+                recent_order = order_history[-1]  # Most recent order
+                recent_items = recent_order.get('items', [])[:2]  # Top 2 items
+                if recent_items:
+                    items_text = ", ".join(recent_items)
+                    recommendations.append(f"🔄 Last time you enjoyed {items_text}. Same again or try something new?")
+            
+            # Default drink
+            default_drink = preferences.get('default_drink')
+            if default_drink:
+                recommendations.append(f"🥤 Your usual drink is {default_drink}. Should I add that?")
+            
+            if not recommendations:
+                recommendations.append("Based on your profile, I'd be happy to suggest our most popular items or help you find something that matches your taste!")
+            
+            return "\\n\\n".join(recommendations)
+        
+        return get_user_recommendations
+
+    def build_update_user_preferences_tool(self) -> FunctionTool:
+        @function_tool
+        async def update_user_preferences(
+            ctx: RunContext[Userdata],
+            preference_type: Literal["dietary", "favorite_item", "default_drink", "avoid_item"],
+            value: str,
+            action: Literal["add", "remove"] = "add"
+        ) -> str:
+            """
+            Update a user's preferences in their profile.
+            Call this when a customer mentions new preferences or wants to change existing ones.
+            
+            Args:
+                preference_type: Type of preference to update
+                value: The preference value to add or remove
+                action: Whether to add or remove the preference
+            """
+            if not ctx.userdata.current_user_profile:
+                return "I need to have your profile loaded first. Please provide your user ID to update your preferences."
+            
+            profile = ctx.userdata.current_user_profile
+            preferences = profile.get('preferences', {})
+            
+            # Update preferences based on type
+            if preference_type == "dietary":
+                dietary_list = preferences.get('dietary', [])
+                if action == "add" and value not in dietary_list:
+                    dietary_list.append(value)
+                elif action == "remove" and value in dietary_list:
+                    dietary_list.remove(value)
+                preferences['dietary'] = dietary_list
+                
+            elif preference_type == "favorite_item":
+                favorites = preferences.get('favorite_items', [])
+                if action == "add" and value not in favorites:
+                    favorites.append(value)
+                elif action == "remove" and value in favorites:
+                    favorites.remove(value)
+                preferences['favorite_items'] = favorites
+                
+            elif preference_type == "default_drink":
+                if action == "add":
+                    preferences['default_drink'] = value
+                elif action == "remove":
+                    preferences.pop('default_drink', None)
+                    
+            elif preference_type == "avoid_item":
+                avoid_list = preferences.get('avoid_items', [])
+                if action == "add" and value not in avoid_list:
+                    avoid_list.append(value)
+                elif action == "remove" and value in avoid_list:
+                    avoid_list.remove(value)
+                preferences['avoid_items'] = avoid_list
+            
+            # Update profile and save
+            profile['preferences'] = preferences
+            ctx.userdata.current_user_profile = profile
+            
+            # Save to Kontext MCP
+            user_id = profile.get('user_id')
+            if user_id:
+                success = await ctx.userdata.profile_manager.store_user_profile(user_id, profile)
+                if success:
+                    return f"Great! I've updated your preference: {action}ed '{value}' to {preference_type}. I'll remember this for next time!"
+                else:
+                    return f"I noted your preference for this session, but had trouble saving it permanently. Your preference: {action} '{value}' to {preference_type}."
+            else:
+                return f"I noted your preference for this session: {action} '{value}' to {preference_type}."
+        
+        return update_user_preferences
 
     async def stt_node(
         self, audio_input: AsyncIterator, model_settings: "ModelSettings"
